@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "my-web-app.frontend.fullname" . }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "my-web-app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+spec:
+  replicas: {{ .Values.replicaCount.frontend }}
+  selector:
+    matchLabels:
+      {{- include "my-web-app.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: frontend
+  template:
+    metadata:
+      labels:
+        {{- include "my-web-app.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: frontend
+    spec:
+      containers:
+      - name: nginx
+        image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
+        imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.frontend.service.port }}
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+        - name: html-content
+          mountPath: /usr/share/nginx/html
+        {{- if .Values.frontend.livenessProbe.enabled }}
+        livenessProbe:
+          httpGet:
+            path: {{ .Values.frontend.livenessProbe.path }}
+            port: {{ .Values.frontend.livenessProbe.port }}
+          initialDelaySeconds: {{ .Values.frontend.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.frontend.livenessProbe.periodSeconds }}
+        {{- end }}
+        {{- if .Values.frontend.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            path: {{ .Values.frontend.readinessProbe.path }}
+            port: {{ .Values.frontend.readinessProbe.port }}
+          initialDelaySeconds: {{ .Values.frontend.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.frontend.readinessProbe.periodSeconds }}
+        {{- end }}
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: {{ include "my-web-app.frontend.fullname" . }}-nginx-config
+      - name: html-content
+        configMap:
+          name: {{ include "my-web-app.frontend.fullname" . }}-html

@@ -1,0 +1,184 @@
+global:
+  namespace: production
+
+replicaCount:
+  frontend: 2
+  backend: 2
+
+backend:
+  image:
+    repository: digitalocean/flask-helloworld
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    port: 5000
+    type: ClusterIP
+  livenessProbe:
+    enabled: true
+    path: "/"
+    port: 5000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    enabled: true
+    path: "/"
+    port: 5000
+    initialDelaySeconds: 20
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+frontend:
+  image:
+    repository: nginx
+    tag: alpine
+    pullPolicy: IfNotPresent
+  service:
+    port: 80
+    type: LoadBalancer
+  livenessProbe:
+    enabled: true
+    path: "/"
+    port: 80
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  readinessProbe:
+    enabled: true
+    path: "/"
+    port: 80
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  host: "myapp.example.com"
+
+frontendHTML: |
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Simple Web App</title>
+      <style>
+          body {
+              font-family: Arial, sans-serif;
+              max-width: 800px;
+              margin: 0 auto;
+              padding: 20px;
+              text-align: center;
+          }
+          .container {
+              margin-top: 50px;
+          }
+          button {
+              padding: 10px 20px;
+              font-size: 16px;
+              margin: 20px;
+              cursor: pointer;
+          }
+          #response {
+              margin-top: 20px;
+              padding: 20px;
+              border: 1px solid #ddd;
+              border-radius: 5px;
+              text-align: left;
+              white-space: pre-wrap;
+          }
+          .success { color: green; }
+          .error { color: red; }
+      </style>
+  </head>
+  <body>
+      <div class="container">
+          <h1>Simple Web Application</h1>
+          <p>Frontend served by Nginx, Backend API by Flask</p>
+          
+          <button onclick="fetchData()">Call Backend API</button>
+          <button onclick="checkHealth()">Check Health</button>
+          <button onclick="checkReadiness()">Check Readiness</button>
+          
+          <div id="response"></div>
+      </div>
+      
+      <script>
+          function fetchData() {
+              document.getElementById('response').className = '';
+              document.getElementById('response').innerHTML = 'Calling backend...';
+              
+              fetch('/api')
+                  .then(response => {
+                      const status = response.status;
+                      return response.text().then(text => ({ status, text }));
+                  })
+                  .then(({ status, text }) => {
+                      document.getElementById('response').className = 'success';
+                      document.getElementById('response').innerHTML = 
+                          `<strong>Backend Response (HTTP ${status}):</strong><br>` +
+                          `"${text}"`;
+                  })
+                  .catch(error => {
+                      document.getElementById('response').className = 'error';
+                      document.getElementById('response').innerHTML = 
+                          `<strong>Error:</strong> ${error.message}`;
+                  });
+          }
+          
+          function checkHealth() {
+              document.getElementById('response').className = '';
+              document.getElementById('response').innerHTML = 'Checking health...';
+              
+              fetch('/health')
+                  .then(response => {
+                      const status = response.status;
+                      return response.text().then(text => ({ status, text }));
+                  })
+                  .then(({ status, text }) => {
+                      document.getElementById('response').className = 'success';
+                      document.getElementById('response').innerHTML = 
+                          `<strong>Health Check:</strong><br>` +
+                          `Status: HTTP ${status} ${status === 200 ? 'OK' : 'Error'}<br>` +
+                          `Response: "${text}"`;
+                  })
+                  .catch(error => {
+                      document.getElementById('response').className = 'error';
+                      document.getElementById('response').innerHTML = 
+                          `<strong>Error:</strong> ${error.message}`;
+                  });
+          }
+          
+          function checkReadiness() {
+              document.getElementById('response').className = '';
+              document.getElementById('response').innerHTML = 'Checking readiness...';
+              
+              fetch('/ready')
+                  .then(response => {
+                      const status = response.status;
+                      return response.text().then(text => ({ status, text }));
+                  })
+                  .then(({ status, text }) => {
+                      document.getElementById('response').className = 'success';
+                      document.getElementById('response').innerHTML = 
+                          `<strong>Readiness Check:</strong><br>` +
+                          `Status: HTTP ${status} ${status === 200 ? 'OK' : 'Error'}<br>` +
+                          `Response: "${text}"`;
+                  })
+                  .catch(error => {
+                      document.getElementById('response').className = 'error';
+                      document.getElementById('response').innerHTML = 
+                          `<strong>Error:</strong> ${error.message}`;
+                  });
+          }
+          window.onload = function() {
+              document.getElementById('response').innerHTML = 
+                  'Frontend loaded. Click buttons to test.';
+          }
+      </script>
+  </body>
+  </html>
