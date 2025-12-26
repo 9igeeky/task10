@@ -37,7 +37,7 @@ frontend:
     pullPolicy: IfNotPresent
   service:
     port: 80
-    type: LoadBalancer
+    type: ClusterIP
   livenessProbe:
     enabled: true
     path: "/"
