@@ -22,7 +22,7 @@ kubectl apply -f manifests/ -n production
 kubectl get all -n production
 ```
 
-### Способ 2: Использование help
+### Способ 2: Использование helm
 
 ``` bash
 # Установите Helm chart
